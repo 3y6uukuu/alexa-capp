@@ -1,5 +1,6 @@
 const express = require('express');
 const alexa = require('alexa-app');
+const AmazonSpeech = require('ssml-builder/amazon_speech');
 
 const PORT = process.env.port || 8082;
 const expressApp = express();
@@ -15,50 +16,90 @@ alexaApp.express({
 
 expressApp.set('view engine', 'ejs');
 
-alexaApp.launch((request, response) => response.say('You launched the <say-as interpret-as="interjection">Connectivity Application!</say-as>'));
+alexaApp.launch((request, response) => {
+    const speech = new AmazonSpeech();
 
-alexaApp.intent('getpassword', {
+    speech
+        .say('You launched the')
+        .sayAs({
+            word: 'Connectivity Application!',
+            interpret: 'interjection',
+        });
+
+    const speechOutput = speech.ssml();
+
+    response.say(speechOutput);
+});
+
+alexaApp.intent('getDeviceDetails', {
+        slots: {
+            settingProperty: 'propertyString',
+        },
         utterances: [
-            'for a password',
-            'what is my password',
-            'for a passport',
-            'what is my passport',
+            `to tell me Wi-Fi {-|settingProperty}`,
+            `to tell me my Wi-Fi {-|settingProperty}`,
+            `for a Wi-Fi {-|settingProperty}`,
+            `what's my Wi-Fi {-|settingProperty}`,
+            `what is my Wi-Fi {-|settingProperty}`,
+            `what's my network {-|settingProperty}`,
+            `what is my network {-|settingProperty}`,
+            `tell me network {-|settingProperty}`,
+            `tell me my {-|settingProperty}`,
+            `for a {-|settingProperty}`,
+            `what's my {-|settingProperty}`,
+            `what is my {-|settingProperty}`,
         ]
     },
-    async (req, res) => {
-        const password = await connector.getPassphrase();
+    async (request, response) => {
+        const speech = new AmazonSpeech();
 
-        if (password === null) {
-            res.say('Something went wrong, please try again later.');
+        const cases = {
+            password: 'getPassphrase',
+            passport: 'getPassphrase',
+
+            name: 'getSSID',
+            title: 'getSSID',
+        };
+
+        const requestedSettingProperty = request.slot('settingProperty');
+
+        const settingProperty = await connector[cases[requestedSettingProperty]]();
+
+        if (settingProperty === null) {
+            speech.prosody({volume: 'soft'}, 'Oops, something went wrong, please try again later.');
         } else {
-            res.say(`Your password is: <prosody rate="x-slow"><say-as interpret-as="characters">${password}</say-as></prosody>`);
+            speech
+                .say(`Your ${requestedSettingProperty} is:`)
+                .pause('500ms')
+                .sayAs({
+                    word: settingProperty,
+                    interpret: 'characters',
+                });
         }
+
+        const speechOutput = speech.ssml();
+
+        response.say(speechOutput);
     }
 );
 
-alexaApp.intent('getwifiname', {
+alexaApp.intent('secret', {
         utterances: [
-            'for a wi-fi name',
-            'what is my wi-fi name',
-            'what is wi-fi name',
-            'for a name',
-            'what is name',
-            'for a while find name',
-            'for a ride find mean',
-            'for a while find',
+            'to tell me a secret',
         ]
     },
-    async (req, res) => {
-        const ssidReference = await connector.getSSID();
+    (request, response) => {
+        const speech = new AmazonSpeech();
 
-        if (ssidReference === null) {
-            res.say('Something went wrong, please try again later.');
-        } else {
-            res.say(`Your Wi-Fi name is: <prosody rate="x-slow">${ssidReference}</prosody>`);
-        }
+        speech.say('Okay, I have one.')
+            .pause('1s')
+            .whisper('Alexa – is not a real Human!')
+            .say('Can you believe it?');
+
+        const speechOutput = speech.ssml();
+
+        response.say(speechOutput);
     }
 );
 
-
-
-expressApp.listen(PORT, () => console.log('Listening on port ' + PORT + ', try http://localhost:' + PORT + '/test'));
+expressApp.listen(PORT, () => console.log(`Listening on port ${PORT}, try http://localhost:${PORT}/test`));
