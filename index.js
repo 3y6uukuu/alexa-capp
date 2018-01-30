@@ -51,30 +51,44 @@ alexaApp.intent('getDeviceDetails', {
         ]
     },
     async (request, response) => {
-        const speech = new AmazonSpeech();
+        const requestedIntent = request.slot('settingProperty');
 
-        const cases = {
+        console.log(`Intent => ${requestedIntent}`);
+
+        const requestedAction = {
             password: 'getPassphrase',
             passport: 'getPassphrase',
 
             name: 'getSSID',
             title: 'getSSID',
-        };
+        }[requestedIntent];
 
-        const requestedSettingProperty = request.slot('settingProperty');
+        const speech = new AmazonSpeech();
 
-        const settingProperty = await connector[cases[requestedSettingProperty]]();
+        if (requestedAction) {
+            const settingProperty = await connector[requestedAction]();
 
-        if (settingProperty === null) {
-            speech.prosody({volume: 'soft'}, 'Oops, something went wrong, please try again later.');
+            if (settingProperty === null) {
+                speech.prosody({volume: 'soft'}, 'Oops, something went wrong with PEAL API, please try again later.');
+            } else {
+                speech
+                    .say(`Your ${requestedIntent} is:`)
+                    .pause('500ms');
+
+                // TODO: refactor
+                if (['password', 'passport'].indexOf(requestedIntent) === -1) {
+
+                    speech.emphasis('moderate', settingProperty);
+
+                } else {
+                    speech.sayAs({
+                        word: settingProperty,
+                        interpret: 'characters',
+                    });
+                }
+            }
         } else {
-            speech
-                .say(`Your ${requestedSettingProperty} is:`)
-                .pause('500ms')
-                .sayAs({
-                    word: settingProperty,
-                    interpret: 'characters',
-                });
+            speech.prosody({volume: 'soft'}, `Sorry, I didn't understand the intent, please try again.`);
         }
 
         const speechOutput = speech.ssml();
@@ -91,10 +105,11 @@ alexaApp.intent('secret', {
     (request, response) => {
         const speech = new AmazonSpeech();
 
-        speech.say('Okay, I have one.')
+        speech
+            .prosody({pitch: 'x-high'}, 'Okay, I have one!')
             .pause('1s')
             .whisper('Alexa – is not a real Human!')
-            .say('Can you believe it?');
+            .prosody({pitch: 'x-high'}, 'Can you believe it?');
 
         const speechOutput = speech.ssml();
 
