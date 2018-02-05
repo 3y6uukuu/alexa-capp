@@ -71,20 +71,21 @@ alexaApp.intent('getDeviceDetails', {
             if (settingProperty === null) {
                 speech.prosody({volume: 'soft'}, 'Oops, something went wrong with PEAL API, please try again later.');
             } else {
-                speech
-                    .say(`Your ${requestedIntent} is:`)
-                    .pause('500ms');
 
-                // TODO: refactor
                 if (['password', 'passport'].indexOf(requestedIntent) === -1) {
-
-                    speech.emphasis('moderate', settingProperty);
+                    speech
+                        .say(`Your Wi-Fi ${requestedIntent} is:`)
+                        .pause('500ms')
+                        .emphasis('moderate', settingProperty);
 
                 } else {
-                    speech.sayAs({
-                        word: settingProperty,
-                        interpret: 'characters',
-                    });
+                    speech
+                        .say(`Your Wi-Fi password is:`)
+                        .pause('500ms')
+                        .sayAs({
+                            word: settingProperty,
+                            interpret: 'characters',
+                        });
                 }
             }
         } else {
@@ -106,10 +107,10 @@ alexaApp.intent('secret', {
         const speech = new AmazonSpeech();
 
         speech
-            .prosody({pitch: 'x-high'}, 'Okay, I have one!')
+            .emphasis('moderate', 'Okay, I have one!')
             .pause('1s')
             .whisper('Alexa – is not a real Human!')
-            .prosody({pitch: 'x-high'}, 'Can you believe it?');
+            .emphasis('moderate', 'can you believe it???');
 
         const speechOutput = speech.ssml();
 
